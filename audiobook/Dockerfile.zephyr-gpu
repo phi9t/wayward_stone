@@ -1,0 +1,23 @@
+ARG ZEPHYR_SNAPSHOT_BASE=sygaldry/zephyr:spack
+FROM ${ZEPHYR_SNAPSHOT_BASE}
+
+USER root
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ffmpeg \
+    libsndfile1 \
+    sox \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN mkdir -p /opt/audiobook && chown -R kvothe:kvothe /opt/audiobook
+
+USER kvothe
+WORKDIR /workspace
+
+COPY --chown=kvothe:kvothe qwen3_tts_audiobook.py /opt/audiobook/qwen3_tts_audiobook.py
+COPY --chown=kvothe:kvothe tts_utils.py /opt/audiobook/tts_utils.py
+COPY --chown=kvothe:kvothe render_book_zephyr.py /opt/audiobook/render_book_zephyr.py
+COPY --chown=kvothe:kvothe zephyr_uv_guard_install.sh /opt/audiobook/zephyr_uv_guard_install.sh
+
+ENV SYGALDRY_SPACK_ENV=/opt/spack_env/zephyr
+ENV AUDIOBOOK_DEFAULT_DEVICE_MAP=cuda
