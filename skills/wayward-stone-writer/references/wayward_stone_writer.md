@@ -1,87 +1,174 @@
 # Wayward Stone Writer (Reference)
 
-This reference generalizes prior manuscript-specific workflows into one run-root workflow, while staying anchored to this repo's sources of truth.
+Drafting guide for run-specific workspaces with Rothfuss-style craft.
 
-## 1) Identify the target run root (`RUN_ROOT`)
+## 1) Identify Your Run
 
-Choose exactly one:
+Runs live under `inkforge/<run-id>/`:
 
-- Known novel-gen run roots: `gpt53/`, `kimi25/`, `kimi25_blend/`.
-- Also accept any new directory that contains chapter files.
-- Use exactly one `RUN_ROOT` per writing task.
+```bash
+# List existing runs
+ls -la inkforge/
 
-Guardrail: do not import invented canon or unresolved threads from one run root into another unless explicitly requested.
+# Current active runs:
+# - inkforge/run-target-030/    (production, 6 chapters)
+# - inkforge/baseline/          (experiment)
+# - inkforge/experimental/      (experiment)
+```
 
-## 2) Non-negotiables (register lock)
+Each run maintains:
+- Independent manuscript state
+- Isolated continuity constraints
+- Separate quality metrics
 
-- **Ch001–002:** frame + told story.
-- **Ch003+:** told-past only; do not put Chronicler/Bast/Kote/Waystone on-page.
-- **Keep Naming ineffable:** describe sensation/aftermath, not mechanics or “rules”.
-- **Keep Chandrian/Amyr unresolved:** hints and consequences are fine; definitive explanations are not.
+## 2) Parallel Experiments
 
-## 3) Drafting loop (repeatable)
+Test different creative approaches simultaneously:
 
-1. **Context pass**
-   - Read the immediately prior chapter.
-   - Read the plan doc for the chapter you’re writing (or draft a plan first).
-   - Check continuity locks inside `RUN_ROOT` (prefer continuity log, then story bible, then chapter-plan docs).
-2. **Plan (1 paragraph + bullets)**
-   - One-sentence **Goal**: what changes by the end.
-   - 2–4 scenes, each with:
-     - location + time feel
-     - the conflict turn
-     - one sensory anchor
-   - Choose 1–2 motifs to deepen (don’t decorate).
-   - Write an **End Hook** as a tightened constraint/tradeoff, not a random cliff.
-3. **Draft**
-   - Write scene by scene, aiming for clean turns.
-   - Keep exposition “under pressure” (in dialogue/subtext/choices).
-4. **Revision passes**
-   - **Voice/rhythm pass** (read aloud in your head): cut flab, fix cadence.
-   - **Rothfuss pass**: remove interpretation; add subtext; end scenes earlier.
-   - **Canon discipline pass**:
-     - If it’s explicit in published canon, state it plainly.
-     - If it’s only implied, keep it implied (“it seemed…”, “I suspected…”).
-     - If it’s project-invented, ensure it is already supported by `CLAUDE.md` + on-page continuity.
-5. **Continuity updates (after landing)**
-   - Add/adjust continuity locks (chapter-keyed bullets).
-   - Update/append the next plan doc in `RUN_ROOT` if your draft changes the near-term spine.
+```bash
+# Conservative approach
+python scripts/inkforge_loop.py run --run-id conservative --target-chapter 5
 
-## 4) Useful checks/commands
+# Experimental approach
+python scripts/inkforge_loop.py run --run-id experimental --target-chapter 5
 
-Motifs:
-- `rg "silence|wind|doors|names" -n <RUN_ROOT>/chapter_*.md`
+# Compare results:
+# - inkforge/conservative/manuscript/chapter_001.md
+# - inkforge/experimental/manuscript/chapter_001.md
+```
 
-Register enforcement (Ch003+):
-- `rg -n "Chronicler|Bast|Kote|Waystone|Reshi|Newarre" <RUN_ROOT>/chapter_00[3-9]*.md <RUN_ROOT>/chapter_01*.md`
+## 3) Non-Negotiables
 
-Next chapter number:
-- `ls <RUN_ROOT>/chapter_*.md | sort -V | tail -n 1`
+- **Ch001–002**: Frame + told story mix
+- **Ch003+**: Told-past only; no frame cast on-page
+- **Naming**: Experiential, never mechanistic rules
+- **Chandrian/Amyr**: Mystery preserved; hints only
 
-## 5) Chapter planning template (Ch003+)
+Register check (Ch003+):
+```bash
+rg -n "Chronicler|Bast|Kote|Waystone|Reshi|Newarre" \
+  inkforge/<run-id>/chapter_00[3-9]*.md
+```
+
+## 4) Drafting Loop
+
+### Context Pass
+1. Read immediately prior chapter
+2. Read plan doc: `inkforge/<run-id>/plans/chapter_NNN-NNN.md`
+3. Check continuity locks in `plans/continuity_log.md`
+
+### Plan Template
 
 ```markdown
 **Chapter XXX — Title**
 
-**Goal:** One sentence (what changes by the end).
+**Goal**: One sentence (what changes by the end).
 
-**Scene A:** [place] (conflict turn + sensory anchor)
-**Scene B:** [place] (conflict turn + sensory anchor)
-**Scene C:** [place] (conflict turn + sensory anchor)
+**Scenes**:
+- Scene A: [location] (conflict turn + sensory anchor)
+- Scene B: [location] (conflict turn + sensory anchor)
+- Scene C: [location] (conflict turn + sensory anchor)
 
-**Motifs:** (pick 1–2)
+**Motifs**: (pick 1–2 from silence, wind, doors, names, music)
 
-**Continuity Locks:**
-- [existing lock you must preserve]
+**Continuity Locks**:
+- [existing constraint to preserve]
+- [new constraint this chapter introduces]
 
-**End Hook:** (a tightened constraint or forced tradeoff)
+**End Hook**: (tightened constraint or forced tradeoff, not cliffhanger)
 ```
 
-## 6) Rothfuss-style rewrite pass (quick checklist)
+### Draft Scene-by-Scene
 
-Use `skills/wayward-stone-rothfuss-style` for deeper guidance. In short:
+Aim for clean turns:
+- Each scene changes something
+- Exposition emerges under pressure
+- No scene exists for information delivery alone
 
-- Cut lines that interpret emotion (“I realized…”, “This meant…”).
-- Dialogue rhythm: **question → deflection → pressure → small accidental truth**.
-- Give other characters real competence: Kvothe gets corrected.
-- End scenes early: on silence, exit, or an unanswered line.
+## 5) Rothfuss-Style Pass
+
+### Cut Interpretation
+
+❌ "I realized she was afraid."
+✅ "Her hand found the edge of the table and did not let go."
+
+### Dialogue as Evasion Game
+
+Structure every significant exchange:
+1. **Question** (direct, puts pressure)
+2. **Deflection** (evasive, maintains guard)
+3. **Pressure** (specific, narrows field)
+4. **Accidental Truth** (reluctant, partial revelation)
+5. **Exit** (before full resolution)
+
+### Competence Balance
+
+Kvothe should be wrong or corrected:
+- ❌ "Kvothe explained the mechanism perfectly"
+- ✅ "'That's not how sympathy works,' Kilvin said. 'The binding would slip.'"
+
+### Habit + Interruption
+
+1. Establish physical habit in calm scene (tapping, adjusting, smoothing)
+2. Break it under pressure (hand stills, forgets habit)
+3. Restore only when tension releases (or don't restore)
+
+### End Scenes Early
+
+Exit on:
+- Silence that stretches
+- Physical exit (door, walk away)
+- Unanswered final line
+- Realization dawning (not stated)
+
+Never on:
+- Summary of what happened
+- Emotional interpretation
+- "And then they decided..."
+
+## 6) Canon Pass
+
+| Source Type | Treatment |
+|-------------|-----------|
+| Published canon (explicit) | State plainly |
+| Published canon (implied) | Keep implied ("it seemed...") |
+| CLAUDE.md canon | May expand if supported |
+| Project-invented | Must have on-page precedent |
+
+## 7) Continuity Updates
+
+After landing chapter:
+
+1. **Add to continuity_log.md**:
+   ```markdown
+   - Chapter XXX: [key fact established] [constraint introduced]
+   ```
+
+2. **Update next plan** if spine shifted
+
+3. **Check motifs**:
+   ```bash
+   rg "silence|wind|doors|names|music" \
+     -n inkforge/<run-id>/manuscript/chapter_*.md
+   ```
+
+## 8) Useful Commands
+
+```bash
+# Check word count
+wc -w inkforge/<run-id>/manuscript/chapter_*.md
+
+# Validate chapter naming
+ls inkforge/<run-id>/manuscript/chapter_*.md | sort -V
+
+# Find motif usage
+rg "silence|wind|doors|names|music" \
+  -n inkforge/<run-id>/manuscript/chapter_*.md
+
+# Check register violations (Ch003+)
+rg -n "Chronicler|Bast|Kote|Waystone|Reshi|Newarre" \
+  inkforge/<run-id>/chapter_00[3-9]*.md
+
+# Next chapter number
+ls inkforge/<run-id>/manuscript/chapter_*.md | sort -V | tail -n 1
+```

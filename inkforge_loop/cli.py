@@ -19,7 +19,9 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--workspace-root", default="inkforge", help="Root directory for generated runs")
     run.add_argument("--run-id", default=_default_run_id(), help="Run identifier")
     run.add_argument("--target-chapter", type=int, default=50, help="Stop when this chapter number is reached")
-    run.add_argument("--max-revision-loops", type=int, default=20, help="Max revise/re-critique loops before full restart")
+    run.add_argument(
+        "--max-revision-loops", type=int, default=20, help="Max revise/re-critique loops before full restart"
+    )
     run.add_argument("--max-total-failures", type=int, default=200, help="Abort run after this many chapter restarts")
     run.add_argument("--quality-overall-min", type=float, default=9.0, help="Minimum overall score")
     run.add_argument("--quality-category-min", type=float, default=8.0, help="Minimum per-category score")

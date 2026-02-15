@@ -13,7 +13,7 @@ shift 2
 
 IMAGE_NAME="${AUDIOBOOK_IMAGE_NAME:-}"
 AUDIOBOOK_DOCKERFILE="${AUDIOBOOK_DOCKERFILE:-}"
-CACHE_HOST_DIR="/mnt/data_infra/huggingface"
+CACHE_HOST_DIR="${HF_CACHE_DIR:-${HOME}/.cache/huggingface}"
 
 if [[ "${AUDIOBOOK_USE_GPU:-0}" == "1" ]]; then
   IMAGE_NAME="${IMAGE_NAME:-qwen3-tts-gpu:latest}"

@@ -84,6 +84,13 @@ require_file "${REPO_ROOT}/RELEASE.md"
 require_file "${REPO_ROOT}/CHANGELOG.md"
 require_file "${REPO_ROOT}/blog_zephyr_qwen3_tts_audiobook.md"
 require_file "${REPO_ROOT}/audiobook/README.md"
+require_file "${REPO_ROOT}/LICENSE"
+require_file "${REPO_ROOT}/CONTRIBUTING.md"
+require_file "${REPO_ROOT}/SECURITY.md"
+require_file "${REPO_ROOT}/pyproject.toml"
+
+rg -q '\.env' "${REPO_ROOT}/.gitignore" || fail ".gitignore missing .env pattern"
+pass ".gitignore contains .env pattern"
 
 require_exec "${REPO_ROOT}/audiobook/zephyr_launch_container.sh"
 require_exec "${REPO_ROOT}/audiobook/run_audiobook_zephyr.sh"

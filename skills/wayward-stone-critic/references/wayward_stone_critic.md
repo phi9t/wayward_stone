@@ -2,7 +2,7 @@
 
 This reference merges strict invariants, macro pacing checks, and scene-craft diagnostics while avoiding brittle "facts" that should instead be verified against `CLAUDE.md`.
 
-Known run roots: `gpt53/`, `kimi25/`, `kimi25_blend/`. Any new directory with chapter files is also valid.
+Runs live under `inkforge/<run-id>/`. Any new directory with chapter files under `inkforge/` is also valid.
 
 ## 1) Review workflow (4 passes)
 
@@ -28,8 +28,12 @@ Known run roots: `gpt53/`, `kimi25/`, `kimi25_blend/`. Any new directory with ch
 - Naming should stay experiential; avoid new mechanics/rules.
 - Chandrian/Amyr: avoid definitive explanations; keep menace and mystery intact.
 
-Helpful check (Ch003+):
-- `rg -n "Chronicler|Bast|Kote|Waystone|Reshi|Newarre" <RUN_ROOT>/chapter_00[3-9]*.md <RUN_ROOT>/chapter_01*.md`
+Register check (Ch003+):
+```bash
+rg -n "Chronicler|Bast|Kote|Waystone|Reshi|Newarre" \
+  inkforge/<run-id>/manuscript/chapter_00[3-9]*.md \
+  inkforge/<run-id>/manuscript/chapter_01*.md
+```
 
 ## 3) What to flag (high signal)
 

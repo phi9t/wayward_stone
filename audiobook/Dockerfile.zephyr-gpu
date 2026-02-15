@@ -1,4 +1,4 @@
-ARG ZEPHYR_SNAPSHOT_BASE=sygaldry/zephyr:spack
+ARG ZEPHYR_SNAPSHOT_BASE=ghcr.io/phi9t/sygaldry/zephyr:vllm
 FROM ${ZEPHYR_SNAPSHOT_BASE}
 
 USER root

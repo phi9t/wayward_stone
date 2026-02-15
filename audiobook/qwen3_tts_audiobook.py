@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 import argparse
 import hashlib
 import re
 import time
 import wave
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable, List
 
 try:
     from .tts_utils import normalize_tts_output
@@ -23,7 +25,7 @@ def positive_int(value: str) -> int:
     return parsed
 
 
-def split_sentences(text: str) -> List[str]:
+def split_sentences(text: str) -> list[str]:
     cleaned = re.sub(r"\s+", " ", text).strip()
     if not cleaned:
         return []
@@ -31,12 +33,12 @@ def split_sentences(text: str) -> List[str]:
     return [p.strip() for p in parts if p.strip()]
 
 
-def chunk_text(text: str, max_chars: int) -> List[str]:
+def chunk_text(text: str, max_chars: int) -> list[str]:
     sentences = split_sentences(text)
     if not sentences:
         return []
 
-    chunks: List[str] = []
+    chunks: list[str] = []
     current = ""
 
     for sentence in sentences:
@@ -189,8 +191,8 @@ def main() -> int:
         elapsed = time.time() - t0
         rate = idx / elapsed if elapsed > 0 else 0.0
         eta = (len(chunks) - idx) / rate if rate > 0 else float("inf")
-        eta_txt = f"{eta/60:.1f}m" if eta != float("inf") else "unknown"
-        print(f"[{idx}/{len(chunks)}] wrote {chunk_path.name} | elapsed={elapsed/60:.1f}m eta={eta_txt}")
+        eta_txt = f"{eta / 60:.1f}m" if eta != float("inf") else "unknown"
+        print(f"[{idx}/{len(chunks)}] wrote {chunk_path.name} | elapsed={elapsed / 60:.1f}m eta={eta_txt}")
 
     chunk_paths = [chunks_dir / f"chunk_{i:05d}.wav" for i in range(1, len(chunks) + 1)]
     missing = [p for p in chunk_paths if not p.exists()]
@@ -201,7 +203,7 @@ def main() -> int:
     merge_wavs(chunk_paths, output_path)
 
     total = time.time() - t0
-    print(f"Rendered {rendered} chunks in {total/60:.1f}m")
+    print(f"Rendered {rendered} chunks in {total / 60:.1f}m")
     print(f"Audiobook written: {output_path}")
     return 0
 

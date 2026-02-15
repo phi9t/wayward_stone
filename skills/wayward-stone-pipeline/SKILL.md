@@ -1,38 +1,118 @@
 ---
 name: wayward-stone-pipeline
-description: Run an autonomous write → critic → revise loop for Wayward Stone chapters within a selected novel-gen run root until pass criteria are met; then advance to the next chapter.
+description: Run autonomous write → critique → revise loops for Wayward Stone chapters with quality gates and resumable state.
 ---
 
 # Wayward Stone Pipeline
 
-Use this skill when the user wants an end-to-end loop that continues a manuscript: draft a chapter, critique it, revise, re-critique, and repeat until it passes; then move on.
+End-to-end chapter generation with automated quality enforcement.
 
-## Run-root model (novel-gen)
+## Usage
 
-- Known run roots: `gpt53/`, `kimi25/`, `kimi25_blend/`.
-- Any new directory with chapter files is a valid run root.
-- Run the entire pipeline in one `RUN_ROOT` at a time.
+```bash
+# Basic run
+python scripts/inkforge_loop.py run --run-id my-book --target-chapter 5
 
-## Target selection (`RUN_ROOT`)
+# With resume (after interruption)
+python scripts/inkforge_loop.py run --run-id my-book --target-chapter 5 --resume
 
-1. If user specifies a run root/path, use it.
-2. Else prefer known run roots that contain chapters.
-3. Else auto-detect the most recently active run root.
-4. If ambiguous, ask the user.
+# Custom quality thresholds
+python scripts/inkforge_loop.py run \
+  --run-id my-book \
+  --target-chapter 10 \
+  --quality-overall-min 9.0 \
+  --quality-category-min 8.0
+```
 
-## Pass criteria
+## Workspace Structure
 
-A chapter “passes” only if:
+```
+inkforge/<run-id>/
+├── manuscript/          # Chapter files (chapter_XXX_title.md)
+├── plans/              # Outlines and continuity_log.md
+├── state/              # run_state.json, chapter_XXX_state.json
+├── logs/               # events.jsonl
+└── artifacts/          # critic/, revision/
+    ├── critic/chapter_XXX_review.json
+    └── revision/chapter_XXX_rev_NN.json
+```
 
-- No invariant violations (register/canon/continuity).
-- Critic score target is met (when scoring is requested):
-  - Overall >= 9.0 / 10, and
-  - No category < 8.0 / 10.
+## Parallel Experiments
 
-## Revision cap
+Run multiple experiments simultaneously:
 
-- If the chapter still fails after 20 revise+re-critique loops, restart with a fresh draft.
+```bash
+# Terminal 1
+python scripts/inkforge_loop.py run --run-id baseline --target-chapter 5
+
+# Terminal 2
+python scripts/inkforge_loop.py run --run-id experimental --target-chapter 5
+
+# Compare: inkforge/baseline/manuscript/ vs inkforge/experimental/manuscript/
+```
+
+Each run maintains independent state and continuity.
+
+## State Machine
+
+```
+PLAN → WRITE → CRITIQUE → (REVISE → RECRITIQUE)* → PASS → DONE
+```
+
+- **PLAN**: Create outline if missing
+- **WRITE**: Initial draft via writer agent
+- **CRITIQUE**: Structured review via critic agent
+- **REVISE**: Fix application via reviser agent
+- **PASS**: Chapter meets quality gate
+
+## Pass Criteria
+
+A chapter passes only when:
+
+- **No invariant violations** (register/canon/continuity)
+- **Overall score ≥ 9.0** (default)
+- **All category scores ≥ 8.0** (default)
+
+Categories evaluated against `writing_style.md` criteria.
+
+## Revision Cap
+
+If a chapter fails after 20 revise+re-critique loops:
+- Full restart with fresh draft
+- Continuity constraints preserved
+- Failure count tracked in run state
+
+## Resumability
+
+State is persisted atomically (JSON files). Resume any time:
+
+```bash
+# Continue from last checkpoint
+python scripts/inkforge_loop.py run --run-id my-book --target-chapter 5 --resume
+```
+
+State includes:
+- Current chapter and phase
+- Completed chapters list
+- Revision/restart counts per chapter
+- Total failure count
+
+## CLI Options
+
+```
+--workspace-root inkforge    # Root for all runs
+--run-id <id>                # Run identifier
+--target-chapter <n>         # Stop at chapter N
+--max-revision-loops 20      # Restart after N revisions
+--max-total-failures 200     # Abort run after N failures
+--quality-overall-min 9.0    # Pass threshold
+--quality-category-min 8.0   # Per-category threshold
+--writer-agent writer        # OpenCode agent id
+--critic-model sonnet        # Claude model alias
+--reviser-model gpt-5        # Codex model
+--resume                     # Continue existing run
+```
 
 ## Reference
 
-Read `references/wayward_stone_pipeline.md` for the exact per-chapter procedure and required post-pass updates.
+Read `references/wayward_stone_pipeline.md` for detailed procedures and failure handling.

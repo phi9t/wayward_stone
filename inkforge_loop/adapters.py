@@ -45,15 +45,19 @@ class AgentInvocationError(RuntimeError):
     pass
 
 
-def _run_command(cmd: list[str], cwd: Path, env: dict[str, str] | None = None) -> str:
-    proc = subprocess.run(
-        cmd,
-        cwd=cwd,
-        env={**os.environ, **(env or {})},
-        text=True,
-        capture_output=True,
-        check=False,
-    )
+def _run_command(cmd: list[str], cwd: Path, env: dict[str, str] | None = None, timeout: int = 600) -> str:
+    try:
+        proc = subprocess.run(
+            cmd,
+            cwd=cwd,
+            env={**os.environ, **(env or {})},
+            text=True,
+            capture_output=True,
+            check=False,
+            timeout=timeout,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise AgentInvocationError(f"Command timed out after {timeout}s: {' '.join(cmd)}") from exc
     if proc.returncode != 0:
         raise AgentInvocationError(
             f"Command failed ({proc.returncode}): {' '.join(cmd)}\nSTDOUT:\n{proc.stdout}\nSTDERR:\n{proc.stderr}"
@@ -202,9 +206,7 @@ def _extract_writer_payload(raw: str) -> dict[str, Any]:
         if not text:
             continue
         nested = _try_parse_json(text)
-        if nested is not None and (
-            "draft_text" in nested or "chapter_title" in nested or "title" in nested
-        ):
+        if nested is not None and ("draft_text" in nested or "chapter_title" in nested or "title" in nested):
             return nested
     return {}
 
@@ -237,9 +239,7 @@ def _looks_like_chapter_draft(text: str) -> bool:
     head = text.lstrip().splitlines()[0] if text.lstrip().splitlines() else ""
     if re.match(r"^#\s*Chapter\s+\d+\s+[—-]\s+.+", head):
         return True
-    if re.match(r"^Chapter\s+\d+\b", head):
-        return True
-    return False
+    return bool(re.match(r"^Chapter\s+\d+\b", head))
 
 
 class MockAgentAdapter:
@@ -455,9 +455,13 @@ class AgentFacade:
         assert self.live_adapter
         return self.live_adapter.critic(prompt)
 
-    def reviser(self, chapter_text: str, critique: CriticResult, prompt: str, output_path: Path, revision_count: int) -> ReviserResult:
+    def reviser(
+        self, chapter_text: str, critique: CriticResult, prompt: str, output_path: Path, revision_count: int
+    ) -> ReviserResult:
         if self.mock:
             assert self.mock_adapter
-            return self.mock_adapter.reviser(chapter_text=chapter_text, critique=critique, revision_count=revision_count)
+            return self.mock_adapter.reviser(
+                chapter_text=chapter_text, critique=critique, revision_count=revision_count
+            )
         assert self.live_adapter
         return self.live_adapter.reviser(prompt=prompt, output_path=output_path)

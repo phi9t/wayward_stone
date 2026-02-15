@@ -1,46 +1,74 @@
 ---
 name: wayward-stone-critic
-description: Critique Wayward Stone chapters for canon discipline, continuity, and Rothfuss-like voice/rhythm across novel-gen run roots; includes a required Pacing & Momentum (micro+macro) section.
+description: Critique Wayward Stone chapters for canon discipline, continuity, and Rothfuss-like voice/rhythm across run-specific workspaces; includes required Pacing & Momentum analysis.
 ---
 
 # Wayward Stone Critic
 
-Use this skill when the user asks for critique/review of one or more chapters in this repository.
+Structured critique for chapters with Pacing & Momentum requirements.
 
-## Run-root model (novel-gen)
+## Target Selection
 
-- Known run roots: `gpt53/`, `kimi25/`, `kimi25_blend/`.
-- Any new directory with chapter files is a valid run root.
-- Do not critique one run root using another run root's continuity assumptions.
+Critique chapters within a specific run:
 
-## Target selection (`RUN_ROOT`)
+```bash
+# Critic reviews are stored in:
+# inkforge/<run-id>/artifacts/critic/chapter_XXX_review.json
+```
 
-1. If user specifies a run root/path, use it.
-2. Else prefer known run roots with chapter files.
-3. Else auto-detect the most recently active run root.
-4. If ambiguous, ask the user.
+Each run maintains independent continuity constraints. Do not cross-reference between runs unless explicitly requested.
 
-## Sources of truth (in order)
+## Sources of Truth (Priority Order)
 
-1. Published canon: NotW + WMF (treat non-explicit claims as inference)
-2. Project canon: `CLAUDE.md`
-3. `RUN_ROOT` continuity artifacts (continuity log, story bible, plan docs)
-4. Voice rubric: `writing_style.md`
-5. Repo rules: `AGENTS.md` + target `*/AGENTS.md`
+1. Published canon (NotW + WMF) - treat non-explicit claims as inference
+2. `CLAUDE.md` - project canon bible
+3. Run-specific continuity:
+   - `inkforge/<run-id>/plans/continuity_log.md`
+   - `inkforge/<run-id>/plans/chapter_XXX-YYY.md`
+4. `writing_style.md` - voice and rhythm rubric
+5. `AGENTS.md` - repository rules
 
-## Critical invariants
+## Critical Invariants
 
-- Chapters 001–002 only: Waystone frame (3rd-limited) plus told story (1st-person).
-- Chapters 003+: told-past only; no present-day interludes or frame cast on-page.
-- Do not harden inferences into facts (if not explicit, phrase as inference).
+- **Chapters 001–002**: Frame (3rd-person) + told story (1st-person)
+- **Chapters 003+**: Told-past only; no frame cast on-page
+- Do not harden inferences into facts
 
-## Output requirements
+Register check (Ch003+):
+```bash
+rg -n "Chronicler|Bast|Kote|Waystone|Reshi|Newarre" \
+  inkforge/<run-id>/manuscript/chapter_00[3-9]*.md
+```
 
-- Prioritize fix-first issues (invariants/canon/continuity before style).
-- Include a dedicated **Pacing & Momentum** section covering:
-  - Micro pacing (inside scenes)
-  - Macro momentum (chapter-to-chapter novelty / escalation shape)
+## Review Workflow (4 Passes)
+
+1. **Register + Structure**
+   - Identify chapter number
+   - Enforce register lock
+
+2. **Story Pass**
+   - What changed by the end? (1 sentence)
+   - Where are the scene turns? Are they earned?
+
+3. **Voice + Craft Pass**
+   - Musicality, metaphor precision, dialogue identity
+   - Subtext/evasion, habit+interruption, early scene exits
+
+4. **Canon + Continuity Pass**
+   - Contradictions vs published canon (explicit)
+   - Contradictions vs `CLAUDE.md`
+   - Contradictions vs run-specific continuity locks
+
+## Output Requirements
+
+Prioritize fix-first issues (invariants/canon/continuity before style).
+
+**Required Section: Pacing & Momentum**
+
+Cover both:
+- **Micro pacing**: Inside scenes (detail vs compression)
+- **Macro momentum**: Chapter-to-chapter novelty and escalation
 
 ## Reference
 
-Read `references/wayward_stone_critic.md` for the full checklist, scoring guidance, and repair toolkit.
+Read `references/wayward_stone_critic.md` for full checklist, scoring guidance, and repair toolkit.

@@ -6,10 +6,24 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 try:
-    from .qwen3_tts_audiobook import INSTRUCT_DEFAULT, MODEL_DEFAULT, chunk_text, markdown_to_text, merge_wavs, positive_int
+    from .qwen3_tts_audiobook import (
+        INSTRUCT_DEFAULT,
+        MODEL_DEFAULT,
+        chunk_text,
+        markdown_to_text,
+        merge_wavs,
+        positive_int,
+    )
     from .tts_utils import chapter_manifest_lines, discover_chapters, normalize_tts_batch_output
 except ImportError:
-    from qwen3_tts_audiobook import INSTRUCT_DEFAULT, MODEL_DEFAULT, chunk_text, markdown_to_text, merge_wavs, positive_int
+    from qwen3_tts_audiobook import (
+        INSTRUCT_DEFAULT,
+        MODEL_DEFAULT,
+        chunk_text,
+        markdown_to_text,
+        merge_wavs,
+        positive_int,
+    )
     from tts_utils import chapter_manifest_lines, discover_chapters, normalize_tts_batch_output
 
 
@@ -145,8 +159,7 @@ def main() -> int:
                     except Exception:
                         pass
                     print(
-                        f"  [{chapter_tag}] CUDA OOM at batch_size={batch_size}; "
-                        f"retrying with batch_size={next_size}"
+                        f"  [{chapter_tag}] CUDA OOM at batch_size={batch_size}; retrying with batch_size={next_size}"
                     )
                     continue
                 raise
@@ -157,14 +170,14 @@ def main() -> int:
                     f"[{chapter_tag}] batch output size mismatch: got {len(audios)} expected {len(batch)}"
                 )
 
-            for (_, _, chunk_path), audio in zip(batch, audios):
+            for (_, _, chunk_path), audio in zip(batch, audios, strict=False):
                 sf.write(chunk_path, audio, samplerate=sample_rate)
 
             batch_start += len(batch)
             done = batch_start
             if done == len(pending) or done % 10 == 0:
                 elapsed = time.time() - chapter_start
-                print(f"  [{chapter_tag}] rendered {done}/{len(pending)} pending chunks elapsed={elapsed/60:.1f}m")
+                print(f"  [{chapter_tag}] rendered {done}/{len(pending)} pending chunks elapsed={elapsed / 60:.1f}m")
 
         ordered = [chapter_chunks / f"chunk_{i:05d}.wav" for i in range(1, len(chunks) + 1)]
         missing = [path for path in ordered if not path.exists()]
@@ -175,7 +188,7 @@ def main() -> int:
         chapter_wavs.append(chapter_wav)
 
         chapter_elapsed = time.time() - chapter_start
-        print(f"[{chapter_tag}] merged -> {chapter_wav} ({chapter_elapsed/60:.1f}m)")
+        print(f"[{chapter_tag}] merged -> {chapter_wav} ({chapter_elapsed / 60:.1f}m)")
         rendered_chapters.append(
             {
                 "chapter": chapter_num,

@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+# NOTE: Chapter discovery logic parallels audiobook/tts_utils.py:discover_chapters
 CHAPTER_RE = re.compile(r"^chapter_(\d+)(?:_.*)?\.md$", re.IGNORECASE)
 
 

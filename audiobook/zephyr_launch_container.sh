@@ -80,6 +80,7 @@ docker info 2>/dev/null | grep -q nvidia || error "NVIDIA Docker runtime not det
 IMAGE="${SYGALDRY_IMAGE:-}"
 [[ -n "${IMAGE}" ]] || error "SYGALDRY_IMAGE is required"
 
+# NOTE: Override these for your environment
 HF_CACHE="${ZEPHYR_SHARED_HF_CACHE:-/mnt/data_infra/zephyr_container_infra/sygaldry/hf_cache}"
 UV_CACHE="${ZEPHYR_SHARED_UV_CACHE:-/mnt/data_infra/zephyr_container_infra/sygaldry/uv_cache}"
 
@@ -145,7 +146,7 @@ if [[ -n "${FALLBACK_DIR_MOUNT}" ]]; then
   DOCKER_ARGS+=("--volume=${FALLBACK_DIR_MOUNT}")
 fi
 
-for var in TERM LANG LC_ALL; do
+for var in TERM LANG LC_ALL HF_TOKEN; do
   if [[ -n "${!var:-}" ]]; then
     DOCKER_ARGS+=("--env=${var}=${!var}")
   fi

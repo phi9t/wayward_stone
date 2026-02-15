@@ -1,144 +1,81 @@
-# Wayward Stone: Process Release
+# Wayward Stone: AI-Assisted Fiction Writing
 
-This repository contains the generation workflow for a long-form fiction + audiobook pipeline.
+Collaborative fiction writing with automated critique loops that enforce continuity and style.
 
-This release track is **process-first**:
-- generation orchestration and runbooks,
-- Zephyr container runtime integration,
-- TTS synthesis wrappers and provenance checks,
-- publication packaging scripts.
+> **⚠️ Research Prototype Notice**
+>
+> This is a research prototype for generating *one specific book* (Wayward Stone).
+> It is **not a framework** and not intended for general-purpose use without
+> modification. Think of it as a hackable foundation—a minimalist starting point
+> showing how to build creative writing pipelines with agent orchestration.
+> Fork it, strip it, adapt it to your own project.
 
-Narrative chapter content exists in the repo but is intentionally out-of-scope for this release guide.
-
-## Quickstart
-
-1. Run release preflight:
+## Quick Start
 
 ```bash
-./scripts/release_preflight.sh
+# Write 5 chapters
+python scripts/inkforge_loop.py run --run-id my-book --target-chapter 5
+
+# Chapters appear in: inkforge/my-book/manuscript/
+
+# Generate audiobook (requires GPU)
+AUDIOBOOK_USE_GPU=1 ./audiobook/run_audiobook_zephyr.sh \
+  inkforge/my-book/manuscript/chapter_001.md outputs/ch01.wav
 ```
 
-2. Run single-chapter synthesis in Zephyr:
+## How It Works
+
+State machine per chapter: **Plan → Write → Critique → Revise → Pass**
+
+- **Continuity tracking**: Automatic in `plans/continuity_log.md`
+- **Quality gate**: Score ≥9.0 overall, ≥8.0 per category
+- **Resumable**: Stop anytime, restart with `--resume`
+
+## Parallel Experiments
+
+Run multiple versions simultaneously:
 
 ```bash
-AUDIOBOOK_USE_GPU=1 \
-./audiobook/run_audiobook_zephyr.sh chapter_01_the_weight_of_the_third_day.md outputs/ch01.wav
+python scripts/inkforge_loop.py run --run-id baseline --target-chapter 5
+python scripts/inkforge_loop.py run --run-id experimental --target-chapter 5
 ```
 
-3. Run batch synthesis:
+## Prerequisites
 
-```bash
-AUDIOBOOK_USE_GPU=1 ./audiobook/run_book_batch_zephyr.sh -- \
-  --source-dir /workspace/wayward_stone/manuscript \
-  --out-dir /workspace/wayward_stone/outputs/book_audio
+- Python 3.9+, opencode agent
+- Docker + NVIDIA GPU (audiobooks only)
+
+## File Structure
+
+```
+inkforge/<run-id>/
+├── manuscript/     # Chapters (chapter_XXX_title.md)
+├── plans/         # Outlines, continuity
+├── state/         # Checkpoints
+└── artifacts/     # Reviews and revisions
 ```
 
-4. Verify Spack provenance:
+## Documentation
 
-```bash
-./audiobook/verify_zephyr_spack_provenance.sh
-```
-
-5. Stage publish artifacts:
-
-```bash
-./scripts/publish_audiobooks.sh --dry-run
-./scripts/publish_audiobooks.sh
-```
-
-6. Run autonomous chapter generation loop:
-
-```bash
-python scripts/inkforge_loop.py run \
-  --workspace-root inkforge \
-  --run-id run-001 \
-  --target-chapter 50
-```
-
-7. Run continuous agent-supervised generation:
-
-```bash
-./scripts/supervise_inkforge_agent.sh \
-  --run-id run-001 \
-  --workspace-root inkforge \
-  --target-chapter 3 \
-  --supervisor-agent codex
-```
-
-## Core Process Docs
-
-- `audiobook/README.md` - Zephyr audiobook workflow
-- `audiobook/zephyr_container_infra_deep_dive.md` - runtime and package policy details
-- `RELEASE.md` - release checklist and gating criteria
-- `blog_zephyr_qwen3_tts_audiobook.md` - engineering deep-dive post
-
-## Inkforge Loop
-
-The orchestration loop writes chapters under a run-scoped root:
-
-```text
-inkforge/<run_id>/
-  manuscript/
-  plans/
-  logs/
-  state/
-  artifacts/
-```
-
-Resume an existing run:
-
-```bash
-python scripts/inkforge_loop.py run \
-  --workspace-root inkforge \
-  --run-id run-001 \
-  --target-chapter 50 \
-  --resume
-```
-
-Run continuous supervision (Codex-first launcher, strict health checks):
-
-```bash
-./scripts/supervise_inkforge_agent.sh \
-  --run-id run-001 \
-  --workspace-root inkforge \
-  --target-chapter 3 \
-  --step 1 \
-  --supervisor-agent codex \
-  --stale-minutes 15 \
-  --poll-seconds 30
-```
-
-## CLI Help
-
-```bash
-./audiobook/run_audiobook_zephyr.sh --help
-./audiobook/run_book_batch_zephyr.sh --help
-./scripts/publish_audiobooks.sh --help
-./scripts/supervise_inkforge_agent.sh --help
-```
+- `CLAUDE.md` - Canon bible (world-building rules)
+- `writing_style.md` - Voice and style rubric
+- `AGENTS.md` - Contributor guidelines
+- `skills/` - Agent capabilities (writer, critic, pipeline, audiobook)
 
 ## Testing
 
-Install test dependencies:
-
 ```bash
-python -m pip install -r requirements-dev.txt
+pytest                    # Unit and offline integration tests
+pytest -m unit           # Unit tests only
+pytest -m integration_offline  # Offline integration tests
 ```
 
-Or run tests without persistent install:
+## Skills
 
-```bash
-uv run --with pytest --with numpy pytest
-```
+Available agent skills:
 
-Run default suite (unit + offline integration):
-
-```bash
-pytest
-```
-
-Run runtime integration tests (Docker/NVIDIA/Zephyr required):
-
-```bash
-RUN_RUNTIME_INTEGRATION=1 pytest -m runtime
-```
+- `wayward-stone-writer` - Draft chapters with canon discipline
+- `wayward-stone-critic` - Structured critique with quality gates
+- `wayward-stone-pipeline` - Autonomous write-critique-revise loops
+- `wayward-stone-audiobook` - GPU-orchestrated audio synthesis
+- `wayward-stone-book-pdf` - Book-quality PDF generation

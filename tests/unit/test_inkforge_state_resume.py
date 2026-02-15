@@ -5,8 +5,6 @@ from pathlib import Path
 import pytest
 
 from inkforge_loop.state import (
-    ChapterState,
-    RunState,
     load_or_init_chapter_state,
     load_or_init_run_state,
     save_chapter_state,

@@ -4,7 +4,12 @@ from pathlib import Path
 
 import pytest
 
-from inkforge_loop.chapter_index import chapter_filename, discover_chapter_files, highest_chapter_number, next_chapter_number
+from inkforge_loop.chapter_index import (
+    chapter_filename,
+    discover_chapter_files,
+    highest_chapter_number,
+    next_chapter_number,
+)
 
 
 @pytest.mark.unit

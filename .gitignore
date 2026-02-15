@@ -1,18 +1,31 @@
+# OS
 .DS_Store
 .idea
 *.log
 tmp/
 
+# Python
 *.py[cod]
 *.egg
-build
-htmlcov
+*.egg-info/
+**/__pycache__/
+build/
+dist/
+htmlcov/
 
-__pycache__
-
-outputs/
-output/
+# Virtual environments
 .venv
 .venv*
 
+# Secrets & credentials
+.env
+.env.*
+*.key
+*.pem
+*.p12
+secrets/
+
+# Project outputs
+outputs/
+output/
 inkforge/

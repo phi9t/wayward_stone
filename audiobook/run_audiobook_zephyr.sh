@@ -1,4 +1,5 @@
-#!/usr/bin/env bash
+#!/bin/bash
+
 set -euo pipefail
 
 usage() {
@@ -88,7 +89,7 @@ IMAGE_NAME="${AUDIOBOOK_IMAGE_NAME:-wayward-stone-audio-zephyr:gpu}"
 DOCKERFILE_PATH="${AUDIOBOOK_DOCKERFILE:-${SCRIPT_DIR}/Dockerfile.zephyr-gpu}"
 DEVICE_MAP_DEFAULT="cuda"
 
-BASE_IMAGE_REF="${ZEPHYR_SNAPSHOT_BASE:-sygaldry/zephyr:spack}"
+BASE_IMAGE_REF="${ZEPHYR_SNAPSHOT_BASE:-ghcr.io/phi9t/sygaldry/zephyr:hf}"
 if [[ -n "${ZEPHYR_SNAPSHOT_DIGEST:-}" ]]; then
   BASE_IMAGE_REF="${BASE_IMAGE_REF}@${ZEPHYR_SNAPSHOT_DIGEST}"
 fi
@@ -118,12 +119,7 @@ if [[ "${HAS_DEVICE_MAP}" -eq 0 ]]; then
   EXTRA_ARGS+=(--device-map "${DEVICE_MAP_DEFAULT}")
 fi
 
-HF_TOKEN_EXPORT=""
-if [[ -n "${HF_TOKEN:-}" ]]; then
-  HF_TOKEN_EXPORT="export HF_TOKEN=$(printf "%q" "${HF_TOKEN}"); "
-fi
-
-CMD="set -euo pipefail; cd /workspace/${REPO_NAME}; ${HF_TOKEN_EXPORT}bash /opt/audiobook/zephyr_uv_guard_install.sh qwen-tts soundfile; ./.venv_audio/bin/python /opt/audiobook/qwen3_tts_audiobook.py --input /workspace/${REPO_NAME}/${REL_INPUT} --output /workspace/${REPO_NAME}/${REL_OUTPUT}"
+CMD="set -euo pipefail; cd /workspace/${REPO_NAME}; bash /opt/audiobook/zephyr_uv_guard_install.sh qwen-tts soundfile; ./.venv_audio/bin/python /opt/audiobook/qwen3_tts_audiobook.py --input /workspace/${REPO_NAME}/${REL_INPUT} --output /workspace/${REPO_NAME}/${REL_OUTPUT}"
 for arg in "${EXTRA_ARGS[@]}" "$@"; do
   CMD+=" $(printf "%q" "${arg}")"
 done

@@ -33,7 +33,7 @@ def test_critic_parses_claude_json_envelope(monkeypatch: pytest.MonkeyPatch) -> 
 
 @pytest.mark.unit
 def test_critic_raises_when_schema_missing(monkeypatch: pytest.MonkeyPatch) -> None:
-    bad_envelope = {"type": "result", "result": "{\"foo\":1}"}
+    bad_envelope = {"type": "result", "result": '{"foo":1}'}
 
     monkeypatch.setattr(
         "inkforge_loop.adapters._run_command",

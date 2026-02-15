@@ -90,7 +90,8 @@ def test_inkforge_restart_after_revision_cap(repo_root: Path, tmp_path: Path) ->
     )
     assert proc.returncode == 0, proc.stdout + proc.stderr
 
-    chapter_state = json.loads((workspace / "restart1" / "state" / "chapter_001_state.json").read_text(encoding="utf-8"))
+    state_path = workspace / "restart1" / "state" / "chapter_001_state.json"
+    chapter_state = json.loads(state_path.read_text(encoding="utf-8"))
     assert chapter_state["passed"] is True
     assert chapter_state["restart_count"] >= 1
 

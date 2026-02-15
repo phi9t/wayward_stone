@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable
 
 import numpy as np
 
@@ -42,6 +42,7 @@ def normalize_tts_batch_output(wav_output, default_sample_rate: int = 24000):
     return [np.asarray(wav_output, dtype=np.float32).ravel()], int(default_sample_rate)
 
 
+# NOTE: Chapter discovery logic parallels inkforge_loop/chapter_index.py:discover_chapter_files
 def discover_chapters(src_dir: Path, glob_pattern: str = "chapter_*.md") -> list[tuple[int, Path]]:
     """Return sorted chapter files by numeric prefix."""
     chapter_name_re = re.compile(r"^chapter_(\d+)(?:_.*)?\.md$", re.IGNORECASE)
@@ -56,4 +57,3 @@ def discover_chapters(src_dir: Path, glob_pattern: str = "chapter_*.md") -> list
 
 def chapter_manifest_lines(chapters: Iterable[tuple[int, Path]]) -> list[str]:
     return [f"{num:03d}\t{path.as_posix()}" for num, path in chapters]
-

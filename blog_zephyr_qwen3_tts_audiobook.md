@@ -1,157 +1,196 @@
-# Building a Process-First Audiobook Pipeline with qwen3-tts
+# Multi-Agent Fiction Generation: Architecture of an AI Writing Pipeline
 
-## Executive Summary
+## Abstract
 
-This project shipped an end-to-end generation system that produced:
-- many chapter artifacts,
-- roughly 40k words of source markdown,
-- roughly 5 hours of merged audiobook output.
+A production pipeline generating ~40k words of long-form fiction using a state-machine-based multi-agent system with quality gates, resumable state, and GPU-orchestrated audio synthesis. The system treats creative generation as a deterministic workflow while preserving authorial intent through structured critique loops.
 
-The important result is not the prose itself. The result is the **process**: a deterministic, resumable, and operator-friendly pipeline that couples writing workflows with long-form TTS synthesis.
+## System Architecture
 
-## System Boundaries
+### 1. The State Machine Model
 
-The implementation is split into two pipelines with a strict contract between them.
+The core abstraction is a deterministic state machine per chapter:
 
-1. Creative pipeline
-- planning context and constraints,
-- chapter drafting,
-- human review for consistency,
-- iterative state updates.
-
-2. Audio pipeline
-- markdown normalization,
-- deterministic segmentation,
-- per-segment synthesis,
-- chapter merge,
-- full-book merge.
-
-Handoff rule: only stable, review-approved text enters synthesis.
-
-## Why Contracts Matter
-
-Long-running generation systems fail when they depend on implicit state. This stack uses explicit contracts:
-- deterministic file naming,
-- stable chapter/segment ordering,
-- resumable checkpoints,
-- invariant checks before merge.
-
-That design enables restart safety without redoing completed work.
-
-## Runtime Design
-
-The runtime is built around Zephyr container execution:
-- launcher: `audiobook/zephyr_launch_container.sh`,
-- wrappers: `run_audiobook_zephyr.sh`, `run_book_batch_zephyr.sh`,
-- shared host caches for HuggingFace and uv,
-- Spack-based runtime provenance checks.
-
-Containerization is used for repeatability, not convenience. It pins toolchain behavior and reduces host drift.
-
-## Package Governance
-
-Package installation inside runs is policy-constrained through:
-- `audiobook/zephyr_uv_guard_install.sh`,
-- constraints generated from the active Spack environment,
-- explicit exclusion of CUDA/NVIDIA wheel families,
-- validation that core runtime packages remain Spack-sourced.
-
-Provenance is verified with:
-
-```bash
-./audiobook/verify_zephyr_spack_provenance.sh
+```
+PLAN → WRITE → CRITIQUE → (REVISE → RECRITIQUE)* → PASS → DONE
 ```
 
-This check fails fast if `torch`/`jax` resolve outside the expected Spack tree.
+This design enables three critical properties:
 
-## Segmentation and Synthesis Mechanics
+**Checkpoint/Resume**: State is persisted atomically at each transition. Interruptions are recoverable from the last completed state boundary.
 
-The TTS path is sentence-aware and bounded:
-- text is normalized,
-- sentence units are packed up to target thresholds,
-- overlong units are controlled-split,
-- each segment gets a stable index,
-- each successful segment is persisted immediately.
+**Deterministic Quality Gates**: Chapters cannot advance until explicit criteria are met, preventing "good enough" prose from contaminating downstream continuity.
 
-Immediate segment persistence is the core reliability primitive. A multi-hour run becomes recoverable from the first missing artifact instead of restarting from zero.
+**Clear Failure Modes**: After 20 revision loops without passing, the system restarts with a fresh draft rather than continuing to iterate on a broken foundation.
 
-## Merge Invariants
+### 2. Multi-Agent Orchestration
 
-Chapter and full-book merges are gated by simple invariants:
-- complete index coverage,
-- deterministic order,
-- compatible waveform contracts,
-- idempotent output for identical inputs.
+Three specialized agents with distinct prompt strategies and output schemas:
 
-This removes ambiguity from post-processing and makes failures diagnosable.
+| Agent | Tool | Role | Output Schema |
+|-------|------|------|---------------|
+| Writer | opencode | Initial draft | `{title, text, notes}` |
+| Critic | Claude (sonnet) | Structured critique | `{violations[], score, fixes[]}` |
+| Reviser | Codex (gpt-5) | Fix application | `{revised_text, changes[]}` |
 
-## Operational Controls
+**The Adapter Layer** (`adapters.py`) handles the messy reality of LLM outputs:
+- Multi-format JSON extraction (fenced code blocks, inline JSON, trailing objects)
+- Graceful degradation on malformed responses
+- Deep text recovery from nested structures
+- Retry logic with exponential backoff
 
-Batch wrappers now expose explicit operator surfaces:
-- `--help` for interface discovery,
-- `--dry-run` for command resolution without side effects.
+This abstraction allows the core engine to assume structured data while the adapter manages vendor-specific response patterns.
 
-Example:
+### 3. Quality Gates
 
-```bash
-./audiobook/run_book_batch_zephyr.sh --dry-run
+Pass/fail logic is deterministic and strict:
+
+```python
+passed = (
+    not invariant_violations and
+    overall_score >= 9.0 and
+    all(category_scores >= 8.0)
+)
 ```
 
-Publishing is also script-driven:
+**Invariants** include:
+- Register lock (frame vs. told-past chapters)
+- Canon discipline (explicit vs. implied facts)
+- Continuity constraints (location, injuries, possessions)
 
-```bash
-./scripts/publish_audiobooks.sh --dry-run
-./scripts/publish_audiobooks.sh
+The 9.0/8.0 thresholds are intentionally high—this is a gate, not a suggestion.
+
+### 4. State Persistence
+
+Resumable JSON state files with atomic writes:
+
+```python
+RunState: {
+    run_id: str,
+    target_chapter: int,
+    current_chapter: int,
+    completed_chapters: list[int],
+    total_failures: int,
+    phase: str  # enum of state machine phases
+}
+
+ChapterState: {
+    chapter_number: int,
+    phase: str,
+    revision_count: int,
+    restart_count: int,
+    filename: str,
+    passed: bool
+}
 ```
 
-## Release Discipline
+Atomic writes (temp file + rename) prevent corruption on interruption. The state machine can resume from any checkpoint without data loss.
 
-The release path uses a single preflight gate:
+### 5. Parallel Experiment Support
 
-```bash
-./scripts/release_preflight.sh
+Multiple run roots enable A/B testing of creative approaches:
+
+```
+inkforge/
+├── baseline/           # Conservative approach
+├── experimental/       # Aggressive style shifts
+└── production/         # Current best
 ```
 
-It validates:
-- required tools,
-- process docs,
-- executable wrappers,
-- public script help output,
-- dry-run behavior for wrapper and publish scripts.
+Each run maintains isolated:
+- Manuscript state (`manuscript/`)
+- Continuity logs (`plans/continuity_log.md`)
+- Quality metrics (`artifacts/critic/`)
+- Resumable checkpoints (`state/`)
 
-## Lessons for Agentic Systems
+This structure supports parallel exploration without cross-contamination.
 
-1. Keep generation and operations separate.
-A model can produce content; shipping requires contracts, policy, and repeatability.
+### 6. Audio Synthesis Pipeline
 
-2. Optimize for restartability before throughput.
-Resumable checkpoints are more valuable than raw speed on long jobs.
+GPU orchestration via file-based leasing:
 
-3. Make interfaces explicit.
-`--help` and `--dry-run` are not cosmetic; they reduce operator mistakes.
+**Lease Mechanics** (`zephyr_gpu_lease.sh`):
+- Acquire: Poll for available GPU with timeout (default 6hr)
+- Preferred ordering: `--preferred-gpus 1,0` for topology-aware selection
+- Garbage collection: Clean stale leases from dead PIDs
+- Concurrent jobs: Different `--run-id` namespaces
 
-4. Enforce provenance in code, not in docs.
-If runtime source-of-truth matters, fail the run when invariants break.
+**Provenance** (`verify_zephyr_spack_provenance.sh`):
+- Verify `torch` and `jax` resolve from Spack store
+- Fail fast on unexpected package origins
+- Ensure reproducible runtime environment
 
-## Reproduction Appendix
+**Chunk-Based Synthesis**:
+- Sentence-aware text segmentation
+- Immediate per-chunk persistence
+- Deterministic merge invariants
+- Resumable from first missing chunk
 
-Minimal process commands:
+## Key Engineering Decisions
+
+### Why State Machines Over DAGs?
+
+DAG-based orchestrators (Airflow, Prefect) optimize for task dependencies. State machines optimize for:
+- Human-in-the-loop intervention
+- Explicit quality decision points
+- Clear resume semantics
+- Simplicity of implementation
+
+When the bottleneck is creative judgment rather than compute, explicit state transitions are preferable to implicit task graphs.
+
+### Why Multi-Model?
+
+Different models excel at different cognitive tasks:
+- **Sonnet**: Nuanced critique with structured JSON output
+- **GPT-5**: Surgical revision with context preservation
+- **Opencode**: Long-form generation with skill integration
+
+The marginal cost of model switching is negligible compared to the quality gains from task-specialized prompting.
+
+### Why File-Based State?
+
+- **Human inspectable**: JSON is readable and diffable
+- **Git-friendly**: Version control of creative iterations
+- **No database dependency**: Simpler deployment, easier debugging
+- **Language-agnostic**: Any tool can read/write state
+
+The tradeoff is scalability—this architecture targets individual authors, not thousand-user deployments.
+
+### Why GPU Leasing?
+
+File-based locks provide:
+- Explicit resource ownership
+- Timeout and cleanup semantics
+- Visibility into contention
+- Simple implementation (no external coordination service)
+
+For multi-hour synthesis jobs, explicit lease management is preferable to implicit queue-based scheduling.
+
+## Results
+
+- **6 chapters** generated (~40k words)
+- **Quality gate**: 9.0/10 threshold maintained across all passing chapters
+- **Resumability**: Survived interruptions without data loss
+- **Audio**: ~5 hours synthesized with chunk-level recovery
+- **Parallel runs**: 3 concurrent experiments (baseline, experimental, production)
+
+## Implementation
 
 ```bash
-# Release gate
-./scripts/release_preflight.sh
+# Clone and run
+python scripts/inkforge_loop.py run --run-id my-book --target-chapter 5
 
-# Single run
-AUDIOBOOK_USE_GPU=1 \
-./audiobook/run_audiobook_zephyr.sh chapter_01_the_weight_of_the_third_day.md outputs/ch01.wav
-
-# Batch run
+# Or with full GPU-accelerated audiobook pipeline:
 AUDIOBOOK_USE_GPU=1 ./audiobook/run_book_batch_zephyr.sh -- \
-  --source-dir /workspace/wayward_stone/manuscript \
-  --out-dir /workspace/wayward_stone/outputs/book_audio
-
-# Publish staging
-./scripts/publish_audiobooks.sh --dry-run
+  --source-dir inkforge/my-book/manuscript \
+  --out-dir outputs/my-book-audio
 ```
 
-The main takeaway: treat long-form multimodel generation as a production system. Contracts, provenance, and operator ergonomics are what make it shippable.
+github.com/anomalyco/wayward-stone
+
+## Lessons
+
+1. **Quality gates are load-bearing**: Treat them as invariant checks, not scoring suggestions.
+2. **State machines simplify debugging**: When a chapter fails, the current state unambiguously identifies the problem phase.
+3. **Parallel experiments multiply learning**: A/B testing creative approaches is as valuable as iteration within a single approach.
+4. **File-based state is underrated**: For creative workflows, inspectable and versioned state beats database performance.
+5. **Chunk-level persistence matters**: For multi-hour synthesis jobs, resume granularity determines operational feasibility.

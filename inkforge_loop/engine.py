@@ -126,7 +126,9 @@ def run_loop(cfg: LoopConfig, resume: bool = False) -> int:
 
     run_state = load_or_init_run_state(cfg.run_state_path, run_id=cfg.run_id, target_chapter=cfg.target_chapter)
     if not resume and run_state.completed_chapters:
-        append_event(events_path, "resume_hint", message="Run has existing completed chapters; use --resume to continue")
+        append_event(
+            events_path, "resume_hint", message="Run has existing completed chapters; use --resume to continue"
+        )
 
     agents = AgentFacade(
         run_root=cfg.run_root,
@@ -180,7 +182,11 @@ def run_loop(cfg: LoopConfig, resume: bool = False) -> int:
                 append_event(events_path, "draft_written", chapter=chapter_num, file=filename)
                 continue
 
-            chapter_path = cfg.manuscript_dir / chapter_state.filename if chapter_state.filename else _chapter_file_for_number(cfg.manuscript_dir, chapter_num)
+            chapter_path = (
+                cfg.manuscript_dir / chapter_state.filename
+                if chapter_state.filename
+                else _chapter_file_for_number(cfg.manuscript_dir, chapter_num)
+            )
             if chapter_path is None or not chapter_path.exists():
                 chapter_state.phase = "WRITE_DRAFT"
                 save_chapter_state(cfg.state_dir, chapter_state)
@@ -189,7 +195,10 @@ def run_loop(cfg: LoopConfig, resume: bool = False) -> int:
 
             if chapter_state.phase in {"CRITIQUE_DRAFT", "RECRITIQUE"}:
                 chapter_text = chapter_path.read_text(encoding="utf-8")
-                critique = agents.critic(chapter_text=chapter_text, prompt=critic_prompt(chapter_text=chapter_text, chapter_num=chapter_num))
+                critique = agents.critic(
+                    chapter_text=chapter_text,
+                    prompt=critic_prompt(chapter_text=chapter_text, chapter_num=chapter_num),
+                )
 
                 critique_path = _critic_artifact_path(cfg, chapter_num)
                 critique_path.write_text(json.dumps(critique.as_dict(), indent=2), encoding="utf-8")
@@ -224,7 +233,12 @@ def run_loop(cfg: LoopConfig, resume: bool = False) -> int:
                                 f"Exceeded max_total_failures ({cfg.max_total_failures}) without reaching quality gate"
                             )
                         save_run_state(cfg.run_state_path, run_state)
-                        append_event(events_path, "chapter_restart", chapter=chapter_num, restart_count=chapter_state.restart_count)
+                        append_event(
+                            events_path,
+                            "chapter_restart",
+                            chapter=chapter_num,
+                            restart_count=chapter_state.restart_count,
+                        )
                     else:
                         chapter_state.phase = "REVISE"
                 save_chapter_state(cfg.state_dir, chapter_state)
@@ -238,7 +252,9 @@ def run_loop(cfg: LoopConfig, resume: bool = False) -> int:
                 revised = agents.reviser(
                     chapter_text=chapter_text,
                     critique=CriticResult(**json.loads(critique_payload)),
-                    prompt=reviser_prompt(chapter_text=chapter_text, critique_json=critique_payload, chapter_num=chapter_num),
+                    prompt=reviser_prompt(
+                        chapter_text=chapter_text, critique_json=critique_payload, chapter_num=chapter_num
+                    ),
                     output_path=revision_output,
                     revision_count=revision_count,
                 )

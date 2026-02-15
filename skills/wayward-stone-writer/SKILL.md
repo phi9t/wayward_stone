@@ -1,49 +1,106 @@
 ---
 name: wayward-stone-writer
-description: Draft/revise Wayward Stone chapters with strict register rules, canon discipline (CLAUDE.md), and continuity management across novel-gen run roots.
+description: Draft Wayward Stone chapters in run-specific workspaces with canon discipline and Rothfuss-style scene craft.
 ---
 
 # Wayward Stone Writer
 
-Use this skill when the user asks to draft, rewrite, revise, or plan chapters in this repository.
+Draft chapters with register discipline, continuity awareness, and Rothfuss-style prose craft.
 
-## Run-root model (novel-gen)
+## Workspace Model
 
-- Treat each manuscript subspace as its own novel-gen run root.
-- Known run roots in this repo: `gpt53/`, `kimi25/`, `kimi25_blend/`.
-- Any new directory that contains chapter files is also a valid run root.
-- Never merge continuities across run roots unless the user explicitly requests a sync/port.
+Workspaces are organized under `inkforge/`:
 
-## Target selection (`RUN_ROOT`)
+```
+inkforge/<run-id>/
+├── manuscript/     # Chapter files
+├── plans/         # Outlines and continuity
+├── state/         # Resumable checkpoints
+└── artifacts/     # Reviews and revisions
+```
 
-1. If the user names a run root/path, use it.
-2. Else prefer known run roots that contain chapters.
-3. Else discover any directory with chapter files and select the most recently active one.
-4. If still ambiguous, ask the user.
+## Parallel Experiments
 
-## Sources of truth (in order)
+Create multiple runs to test different approaches:
 
-1. Repo rules: `AGENTS.md`
-2. Voice rubric: `writing_style.md`
-3. Project canon: `CLAUDE.md`
-4. `RUN_ROOT` continuity + plans (discover in this order):
-   - continuity log (for example, `plans/continuity_log.md`)
-   - story bible (for example, `story_bible.md`)
-   - act map and nearest chapter-plan docs in the same `RUN_ROOT`
+```bash
+# Baseline approach
+python scripts/inkforge_loop.py run --run-id baseline --target-chapter 5
 
-## Hard invariants
+# Experimental approach
+python scripts/inkforge_loop.py run --run-id experimental --target-chapter 5
+```
 
-- Chapters 001–002 only: Waystone frame (3rd-limited) plus told story (1st-person).
-- Chapters 003+: told-past only (1st-person). No present-day interludes or frame cast on-page.
-- Headings + filenames must follow the active run root's established chapter convention.
+Each run maintains isolated state, continuity, and quality metrics.
 
-## Workflow (default)
+## Sources of Truth (Priority Order)
 
-1. Read the previous chapter (and the relevant plan doc).
-2. Skim `RUN_ROOT` continuity artifacts for locks you must not contradict.
-3. Draft for scene turns first; revise for rhythm/voice second; canon pass last.
-4. After landing the chapter, update continuity artifacts only inside `RUN_ROOT`.
+1. `AGENTS.md` - Repository rules
+2. `writing_style.md` - Voice and rhythm rubric
+3. `CLAUDE.md` - Project canon bible
+4. Run-specific continuity:
+   - `inkforge/<run-id>/plans/continuity_log.md`
+   - `inkforge/<run-id>/plans/chapter_XXX-YYY.md`
+
+## Hard Invariants
+
+- **Chapters 001–002**: Frame narrative (3rd-person) + told story (1st-person)
+- **Chapters 003+**: Told-past only (1st-person Kvothe). No Chronicler/Bast/Kote on-page.
+- **Naming**: Experiential, never mechanistic
+- **Chandrian/Amyr**: Hints and consequences only, never definitive explanations
+
+## Workflow
+
+1. **Context Pass**
+   - Read previous chapter
+   - Check continuity log for locks
+   - Review plan doc (create if missing)
+
+2. **Draft**
+   - Scene-by-scene with clean turns
+   - Keep exposition "under pressure" (dialogue/subtext/choices)
+
+3. **Voice/Rhythm Pass**
+   - Read aloud in your head
+   - Cut flab, fix cadence
+
+4. **Rothfuss Pass** (see below)
+
+5. **Canon Pass**
+   - Published canon: state plainly if explicit
+   - Implied canon: keep implied ("it seemed…")
+   - Project-invented: must be in CLAUDE.md
+
+6. **Update Continuity**
+   - Add chapter-keyed bullets to continuity log
+   - Update next plan if spine changed
+
+## Rothfuss-Style Scene Craft
+
+### Core Principles
+
+- **Never explain the point**: Cut interpretation lines ("I realized…", "This meant…")
+- **Dialogue as evasion**: Question → deflection → pressure → accidental truth
+- **Competence balance**: Kvothe gets corrected; others win quietly
+- **Habit + interruption**: Establish physical habit, break it under pressure
+- **End scenes early**: Exit on silence/leave/unanswered line
+
+### Dialogue Rhythm
+
+```
+Character A asks (direct)
+Character B deflects (evasive)
+Character A presses (specific)
+Character B gives partial truth (reluctant)
+[Exit before resolution]
+```
+
+### Sensory Anchors
+
+Replace abstract with concrete:
+- ❌ "The room was tense"
+- ✅ "No one touched their tea"
 
 ## Reference
 
-Read `references/wayward_stone_writer.md` for templates, checklists, and the “Rothfuss-style rewrite pass” guidance.
+Read `references/wayward_stone_writer.md` for templates, checklists, and chapter planning guidance.
